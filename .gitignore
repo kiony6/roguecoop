@@ -1,0 +1,4 @@
+*.godot
+*.gen.*
+export/
+.godot/
