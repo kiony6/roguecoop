@@ -27,7 +27,7 @@ func refresh() -> void:
 	
 	for key in _talent_keys:
 		var lv := Global.talent_level(key)
-		var cost := _talent_costs.get(key, 50) * (1 + lv)
+		var cost: int = _talent_costs.get(key, 50) * (1 + lv)
 		var hb := HBoxContainer.new()
 		hb.position = Vector2(20, 80 + _talent_keys.find(key) * 60)
 		hb.size = Vector2(540, 45)
@@ -44,17 +44,17 @@ func refresh() -> void:
 		hb.add_child(ll)
 		
 		var btn := Button.new()
-		var can := lv < 10 and Global.data["shards"] >= cost
+		var can_up: bool = lv < 10 and Global.data["shards"] >= cost
 		btn.text = "升级(%d碎)" % cost
-		btn.disabled = not can
-		var k := key
+		btn.disabled = not can_up
+		var k: String = key
 		btn.pressed.connect(_upgrade_talent.bind(k))
 		hb.add_child(btn)
 
 
 func _upgrade_talent(key: String) -> void:
-	var lv := Global.talent_level(key)
-	var cost := _talent_costs.get(key, 50) * (1 + lv)
+	var lv: int = Global.talent_level(key)
+	var cost: int = _talent_costs.get(key, 50) * (1 + lv)
 	Global.upgrade_talent(key, cost)
 	refresh()
 

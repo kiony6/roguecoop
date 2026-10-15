@@ -15,7 +15,7 @@ func refresh() -> void:
 		if c.name != "Title" and c.name != "BackBtn":
 			c.queue_free()
 	
-	var scores := Global.data["scores"]
+	var scores: Array = Global.data["scores"]
 	if scores.size() == 0:
 		var empty := Label.new()
 		empty.text = "暂无记录"
