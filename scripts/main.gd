@@ -84,7 +84,7 @@ func _on_login() -> void:
 
 func _on_level_selected(idx: int) -> void:
 	_selected_level = idx
-	# 启动世界场景，传入关卡 ID
+	Global.current_level = idx
 	get_tree().change_scene_to_file("res://scenes/world.tscn")
 
 

@@ -1,6 +1,5 @@
 extends Node2D
-## 世界场景：按 Net 广播的 world_state 渲染玩家/敌人/掉落/弹丸与房间墙体，
-## 并承载 HUD / 升级 / 结算面板。不参与任何权威裁决。
+## 世界场景：按 Net 广播的 world_state 渲染，单人模式本地模拟战斗。
 
 const PlayerScript := preload("res://scripts/player.gd")
 const EnemyScript := preload("res://scripts/enemy.gd")
@@ -11,6 +10,17 @@ const RunOverMenu := preload("res://scripts/runover_menu.gd")
 const Progression := preload("res://sim/progression.gd")
 const Weapons := preload("res://sim/weapons.gd")
 const Rooms := preload("res://sim/rooms.gd")
+const Combat := preload("res://sim/combat.gd")
+const NetHostLogic := preload("res://net/net_host.gd")
+
+# 5 关卡配置（参考 pygame 版 LEVELS）
+const LEVEL_CFG: Array = [
+	{"name": "数据废墟", "time": 120, "hp": 1.0, "spd": 1.0, "dmg": 1.0, "boss_hp": 500},
+	{"name": "病毒丛林", "time": 150, "hp": 1.5, "spd": 1.1, "dmg": 1.3, "boss_hp": 1200},
+	{"name": "故障深渊", "time": 180, "hp": 2.2, "spd": 1.2, "dmg": 1.6, "boss_hp": 2500},
+	{"name": "核心风暴", "time": 210, "hp": 3.0, "spd": 1.3, "dmg": 2.0, "boss_hp": 4500},
+	{"name": "终焉之地", "time": 300, "hp": 4.0, "spd": 1.5, "dmg": 2.5, "boss_hp": 8000},
+]
 
 const COLORS: Array[Color] = [
 	Color("4aa3ff"),
@@ -36,37 +46,102 @@ var _combos_str := ""
 var _upgrade_menu: Control
 var _runover_menu: Control
 
+# 单机模拟后端
+var _single_host: NetHostLogic = null
+var _single_id: int = 1
+var _single_run_over := false
+
 @onready var _info: Label = $Hud/TopBar/Info
 @onready var _hp_fill: ColorRect = $Hud/HpBar/HpFill
 @onready var _hp_label: Label = $Hud/HpLabel
 @onready var _combo_label: Label = $Hud/ComboLabel
 
+func _is_single() -> bool:
+	return Net.mode == Net.Mode.NONE
+
+func _host() -> NetHostLogic:
+	return _single_host if _is_single() else null
+
 
 func _ready() -> void:
-	Net.world_state.connect(_on_world_state)
-	Net.player_left.connect(_on_player_left)
+	if _is_single():
+		_single_host = NetHostLogic.new()
+		_single_host.reset()
+		_single_host.spawn_interval = 1.5
+		_single_host.add_player(_single_id)
+		_single_host.players[_single_id]["pos"] = Vector2(640, 360)
+	else:
+		Net.world_state.connect(_on_world_state)
+		Net.player_left.connect(_on_player_left)
+		Net.room_ready.connect(_on_room_ready)
+		if Net.is_host():
+			queue_redraw()
+
 	Net.upgrade_offer.connect(_on_upgrade_offer)
 	Net.player_upgrade.connect(_on_player_upgrade)
 	Net.run_over.connect(_on_run_over)
-	Net.room_ready.connect(_on_room_ready)
-	if Net.is_host():
-		queue_redraw()
-
-	_upgrade_menu = UpgradeMenu.new()
-	_upgrade_menu.name = "UpgradeMenu"
-	$Hud.add_child(_upgrade_menu)
-	_upgrade_menu.picked.connect(_on_upgrade_picked)
 
 	_runover_menu = RunOverMenu.new()
 	_runover_menu.name = "RunOverMenu"
 	$Hud.add_child(_runover_menu)
 	_runover_menu.back_requested.connect(_on_back_requested)
 
+	_upgrade_menu = UpgradeMenu.new()
+	_upgrade_menu.name = "UpgradeMenu"
+	$Hud.add_child(_upgrade_menu)
+	_upgrade_menu.picked.connect(_on_upgrade_picked)
+
 	_update_info()
 
 
-func _process(_delta: float) -> void:
+func _physics_process(_delta: float) -> void:
 	_update_info()
+
+	# 单机模式：本地跑 host 模拟 + 直接用渲染数据喂自己
+	if _is_single():
+		if _single_run_over:
+			return
+		var h := _single_host
+		# 读取本地输入
+		var move := Input.get_vector("move_left", "move_right", "move_up", "move_down")
+		var buttons := 0
+		if Input.is_action_pressed("fire"):
+			buttons |= 1
+		h.set_remote_input(_single_id, move, buttons)
+		# 物理步进（1/60 秒）
+		h.physics_step(_delta)
+		# 检查游戏是否结束
+		if h.run_over:
+			_single_run_over = true
+			_on_run_over(h.won, h.stats(_single_id))
+			return
+		# 如果有待处理的升级
+		var offers := h.pending_offer(_single_id)
+		if offers.size() > 0:
+			_on_upgrade_offer(offers)
+		# 渲染世界
+		_sync_players(h.player_states())
+		_sync_enemies(h.enemy_states())
+		_sync_loot(h.loot_states())
+		_sync_projectiles(h.projectile_states())
+		# 更新 HUD 数据
+		var m := h.meta(_single_id)
+		_level = int(m.get("level", 1))
+		_xp = int(m.get("xp", 0))
+		_kills = int(m.get("kills", 0))
+		_wave = int(m.get("wave", 1))
+		_hp = int(m.get("hp", 100))
+		_max_hp = int(m.get("max_hp", 100))
+		_combos_str = ""
+		var combos_raw: Array = m.get("combos", [])
+		if combos_raw.size() > 0:
+			var names: Array = []
+			for cid in combos_raw:
+				for c in Weapons.COMBOS:
+					if c["id"] == cid:
+						names.append(c["name"])
+						break
+			_combos_str = "组合: " + ", ".join(names)
 
 
 func _draw() -> void:
@@ -220,7 +295,10 @@ func _on_upgrade_offer(choices: PackedInt32Array) -> void:
 
 
 func _on_upgrade_picked(card_id: int) -> void:
-	Net.send_upgrade_pick(card_id)
+	if _is_single():
+		_single_host.apply_choice(_single_id, card_id)
+	else:
+		Net.send_upgrade_pick(card_id)
 
 
 func _on_player_upgrade(player_id: int, card_id: int) -> void:

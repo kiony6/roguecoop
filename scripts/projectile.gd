@@ -50,9 +50,16 @@ func _physics_process(_delta: float) -> void:
 func _draw() -> void:
 	var r := Weapons.radius(kind)
 	var col := Color("a8e0ff")
-	if kind == Weapons.KIND_SHOTGUN:
-		col = Color("ffe9a8")
-	elif kind == Weapons.KIND_RIFLE:
-		col = Color("ffd0f0")
+	match kind:
+		Weapons.KIND_PISTOL: col = Color("ffffaa")
+		Weapons.KIND_RIFLE: col = Color("ffd0f0")
+		Weapons.KIND_SHOTGUN: col = Color("ffe9a8")
+		Weapons.KIND_RING: col = Color("88ffff")
+		Weapons.KIND_LASER: col = Color("f0abfc")
+		Weapons.KIND_MISSILE: col = Color("ffb080")
+		Weapons.KIND_MINE: col = Color("c084fc")
+		Weapons.KIND_FROST: col = Color("88ddff")
+		Weapons.KIND_LIGHTNING: col = Color("fde047")
+		Weapons.KIND_SPIKES: col = Color("ff6060")
 	draw_circle(Vector2.ZERO, r, col)
 	draw_arc(Vector2.ZERO, r, 0.0, TAU, 16, col.darkened(0.4), 1.5)
