@@ -46,9 +46,9 @@ text = "进入游戏"
 [node name="MenuPanel" type="Panel" parent="."]
 visible = false
 offset_left = 440.0
-offset_top = 180.0
+offset_top = 160.0
 offset_right = 840.0
-offset_bottom = 520.0
+offset_bottom = 580.0
 
 [node name="MenuTitle" type="Label" parent="MenuPanel"]
 offset_left = 40.0
@@ -70,14 +70,36 @@ offset_left = 40.0
 offset_top = 120.0
 offset_right = 300.0
 offset_bottom = 160.0
-text = "开始游戏（单人）"
+text = "开始游戏"
 
-[node name="LobbyBtn" type="Button" parent="MenuPanel"]
+[node name="TalentBtn" type="Button" parent="MenuPanel"]
 offset_left = 40.0
 offset_top = 180.0
 offset_right = 300.0
 offset_bottom = 220.0
+text = "天赋树"
+
+[node name="RankBtn" type="Button" parent="MenuPanel"]
+offset_left = 40.0
+offset_top = 240.0
+offset_right = 300.0
+offset_bottom = 280.0
+text = "排行榜"
+
+[node name="LobbyBtn" type="Button" parent="MenuPanel"]
+offset_left = 40.0
+offset_top = 300.0
+offset_right = 300.0
+offset_bottom = 340.0
 text = "联机大厅"
+
+[node name="ShardLabel" type="Label" parent="MenuPanel"]
+offset_left = 40.0
+offset_top = 360.0
+offset_right = 300.0
+offset_bottom = 385.0
+text = "碎片: 0"
+theme_override_colors/font_color = Color(1, 0.7, 0.3)
 
 [node name="LevelPanel" type="Panel" parent="."]
 visible = false
@@ -143,4 +165,50 @@ offset_left = 40.0
 offset_top = 520.0
 offset_right = 240.0
 offset_bottom = 560.0
+text = "返回"
+
+[node name="TalentPanel" type="Panel" parent="."]
+visible = false
+offset_left = 340.0
+offset_top = 80.0
+offset_right = 940.0
+offset_bottom = 640.0
+script = ExtResource("2_talent")
+
+[node name="ShardLabel" type="Label" parent="TalentPanel"]
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 300.0
+offset_bottom = 45.0
+text = "碎片: 0"
+theme_override_colors/font_color = Color(1, 0.7, 0.3)
+
+[node name="BackBtn" type="Button" parent="TalentPanel"]
+offset_left = 460.0
+offset_top = 20.0
+offset_right = 580.0
+offset_bottom = 55.0
+text = "返回"
+
+[node name="RankPanel" type="Panel" parent="."]
+visible = false
+offset_left = 340.0
+offset_top = 80.0
+offset_right = 940.0
+offset_bottom = 640.0
+script = ExtResource("3_rank")
+
+[node name="Title" type="Label" parent="RankPanel"]
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 300.0
+offset_bottom = 50.0
+text = "排行榜"
+theme_override_font_sizes/font_size = 20
+
+[node name="BackBtn" type="Button" parent="RankPanel"]
+offset_left = 460.0
+offset_top = 20.0
+offset_right = 580.0
+offset_bottom = 55.0
 text = "返回"

@@ -76,7 +76,17 @@ func _ready() -> void:
 		var cfg: Dictionary = LEVEL_CFG[lvl]
 		_single_host.spawn_interval = max(0.4, 1.5 - float(lvl) * 0.2)
 		_single_host.add_player(_single_id)
-		_single_host.players[_single_id]["pos"] = Vector2(640, 360)
+		var p: Dictionary = _single_host.players[_single_id]
+		p["pos"] = Vector2(640, 360)
+		# 应用天赋效果
+		p["hp"] += Global.talent_level("hp") * 10
+		p["hp"] = maxi(p["hp"], 1)
+		p["mods"]["damage_add"] = Global.talent_level("damage") * 2
+		p["mods"]["move_speed_scale"] = 1.0 + Global.talent_level("speed") * 0.05
+		p["mods"]["crit_chance_add"] = Global.talent_level("crit") * 0.03
+		p["mods"]["cooldown_scale"] = maxf(0.5, 1.0 - Global.talent_level("atk_speed") * 0.05)
+		p["mods"]["heal_per_level"] = Global.talent_level("regen")
+		p["mods"]["max_hp_add"] = Global.talent_level("hp") * 10
 		# 初始刷一批敌人让玩家有东西打
 		for i in 10:
 			var a := randf() * TAU
@@ -349,6 +359,17 @@ func _on_run_over(won: bool, stats: Dictionary) -> void:
 		_upgrade_menu.visible = false
 	if _runover_menu != null:
 		_runover_menu.show_result(won, stats)
+	# 记录排行榜
+	Global.add_score({
+		"name": Global.nickname if not Global.nickname.is_empty() else "无名",
+		"level": int(stats.get("level", 1)),
+		"kills": int(stats.get("kills", 0)),
+		"boss_kills": int(stats.get("boss_kills", 0)),
+		"wave": _wave,
+	})
+	# 奖励碎片
+	var reward := int(stats.get("kills", 0)) * 2 + (50 if won else 10)
+	Global.add_shards(reward)
 
 
 func _on_back_requested() -> void:

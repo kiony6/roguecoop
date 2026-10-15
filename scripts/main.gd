@@ -1,5 +1,5 @@
 extends Control
-## 主菜单总控：登录 → 主菜单 → 选关 / 联机大厅
+## 主菜单总控：登录 → 主菜单（含天赋树/排行榜） → 选关 / 联机大厅
 
 const Protocol := preload("res://net/protocol.gd")
 
@@ -10,9 +10,12 @@ var _selected_level := 0
 @onready var _menu_panel: Panel = $MenuPanel
 @onready var _level_panel: Panel = $LevelPanel
 @onready var _lobby_panel: Panel = $LobbyPanel
+@onready var _talent_panel: Panel = $TalentPanel
+@onready var _rank_panel: Panel = $RankPanel
 
 @onready var _nick_field: LineEdit = $LoginPanel/NickField
 @onready var _nick_display: Label = $MenuPanel/NickDisplay
+@onready var _shard_label: Label = $MenuPanel/ShardLabel
 @onready var _lobby_info: Label = $LobbyPanel/LobbyInfo
 @onready var _lobby_ip: LineEdit = $LobbyPanel/LobbyIpField
 
@@ -24,6 +27,8 @@ func _ready() -> void:
 
 	# 主菜单
 	$MenuPanel/StartBtn.pressed.connect(_show_level_select)
+	$MenuPanel/TalentBtn.pressed.connect(_show_talent)
+	$MenuPanel/RankBtn.pressed.connect(_show_rank)
 	$MenuPanel/LobbyBtn.pressed.connect(_show_lobby)
 
 	# 选关
@@ -41,6 +46,10 @@ func _ready() -> void:
 	$LobbyPanel/LobbyJoinBtn.pressed.connect(_on_join_pressed)
 	$LobbyPanel/LobbyBackBtn.pressed.connect(_show_menu)
 
+	# 天赋树 + 排行榜
+	$TalentPanel/BackBtn.pressed.connect(_show_menu)
+	$RankPanel/BackBtn.pressed.connect(_show_menu)
+
 	Net.connected_ok.connect(_on_connected, CONNECT_ONE_SHOT)
 	Net.connection_failed.connect(_on_connection_failed)
 
@@ -52,6 +61,8 @@ func _show_login() -> void:
 	_menu_panel.visible = false
 	_level_panel.visible = false
 	_lobby_panel.visible = false
+	_talent_panel.visible = false
+	_rank_panel.visible = false
 
 
 func _show_menu() -> void:
@@ -59,12 +70,26 @@ func _show_menu() -> void:
 	_menu_panel.visible = true
 	_level_panel.visible = false
 	_lobby_panel.visible = false
+	_talent_panel.visible = false
+	_rank_panel.visible = false
+	_shard_label.text = "碎片: %d" % Global.data["shards"]
 
 
 func _show_level_select() -> void:
 	_menu_panel.visible = false
 	_level_panel.visible = true
-	_lobby_panel.visible = false
+
+
+func _show_talent() -> void:
+	_menu_panel.visible = false
+	_talent_panel.visible = true
+	$TalentPanel.refresh()
+
+
+func _show_rank() -> void:
+	_menu_panel.visible = false
+	_rank_panel.visible = true
+	$RankPanel.refresh()
 
 
 func _show_lobby() -> void:
@@ -78,7 +103,9 @@ func _on_login() -> void:
 	if nick.is_empty():
 		return
 	_nickname = nick
+	Global.nickname = nick
 	_nick_display.text = "玩家: %s" % _nickname
+	_shard_label.text = "碎片: %d" % Global.data["shards"]
 	_show_menu()
 
 
