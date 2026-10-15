@@ -25,6 +25,7 @@ var elapsed := 0.0
 var run_over := false
 var won := false
 var boss_id := 0
+var enemy_fire_enabled := true  # 测试时可关闭敌人远程攻击
 
 var players := {}  # id -> {pos, move, buttons, hp, status, fire_cd, invuln,
 # revive_progress, pickups, mods, level, xp}
@@ -122,6 +123,8 @@ func physics_step(delta: float) -> void:
 		players[1]["buttons"] = local_buttons
 	_step_players(delta)
 	_step_firing()
+	_step_combos(delta)         # 组合技触发
+	_step_enemy_firing(delta)   # 敌人远程攻击
 	_step_projectiles(delta)
 	_step_enemies(delta)
 	_step_downed(delta)
@@ -309,25 +312,67 @@ func _step_firing() -> void:
 func _step_projectiles(delta: float) -> void:
 	var expired: Array = []
 	var killed: Array = []
+	# 黑洞吸附：先计算所有黑洞对敌人物体的拉力
+	var blackholes: Array = []
 	for pid in projectiles:
 		var pr: Dictionary = projectiles[pid]
+		if pr.get("pull_radius", 0.0) > 0.0:
+			blackholes.append(pr)
+	for bh in blackholes:
+		for eid in enemies:
+			var e: Dictionary = enemies[eid]
+			var d: float = bh["pos"].distance_to(e["pos"])
+			if d < bh["pull_radius"] and d > 5.0:
+				var pull_dir: Vector2 = (bh["pos"] - e["pos"]).normalized()
+				var force: float = (1.0 - d / bh["pull_radius"]) * 300.0 * delta
+				e["pos"] += pull_dir * force
+				e["hp"] -= int(bh["dmg"]) * delta
+	for pid in projectiles:
+		var pr: Dictionary = projectiles[pid]
+		if pr.get("pull_radius", 0.0) > 0.0:
+			pr["ttl"] -= delta
+			if pr["ttl"] <= 0.0:
+				expired.append(pid)
+			continue
 		pr["pos"] = pr["pos"] + pr["vel"] * delta
 		pr["ttl"] -= delta
 		if pr["ttl"] <= 0.0:
 			expired.append(pid)
 			continue
-		for eid in enemies:
-			var e: Dictionary = enemies[eid]
-			var radius := Combat.enemy_radius(e["kind"])
-			var proj_r := Weapons.radius(pr["kind"])
-			var hit := Combat.circle_hit(pr["pos"], proj_r, e["pos"], radius)
-			if not hit:
-				continue
-			e["hp"] -= int(pr["dmg"])
-			expired.append(pid)
-			if e["hp"] <= 0:
-				killed.append([eid, int(pr.get("owner", 0))])
-			break
+		var from_enemy: bool = pr.get("from_enemy", false)
+		# 玩家子弹打敌人
+		if not from_enemy:
+			for eid in enemies:
+				var e: Dictionary = enemies[eid]
+				var radius := Combat.enemy_radius(e["kind"])
+				var proj_r := Weapons.radius(pr["kind"])
+				var hit := Combat.circle_hit(pr["pos"], proj_r, e["pos"], radius)
+				if not hit:
+					continue
+				e["hp"] -= int(pr["dmg"])
+				expired.append(pid)
+				if pr.get("freeze", 0.0) > 0.0:
+					e["freeze_time"] = pr["freeze"]
+				if e["hp"] <= 0:
+					killed.append([eid, int(pr.get("owner", 0))])
+				break
+		# 敌人子弹打玩家
+		else:
+			for id in players:
+				var p: Dictionary = players[id]
+				if p["status"] != Combat.PLAYER_ALIVE:
+					continue
+				if p["invuln"] > 0.0:
+					continue
+				var hit := Combat.circle_hit(pr["pos"], 6.0, p["pos"], Combat.PLAYER_RADIUS)
+				if not hit:
+					continue
+				p["hp"] = maxi(0, p["hp"] - int(pr["dmg"]))
+				expired.append(pid)
+				if p["hp"] <= 0:
+					p["status"] = Combat.PLAYER_DOWNED
+					p["revive_progress"] = 0.0
+				break
 	for pid in expired:
 		projectiles.erase(pid)
 	for k in killed:
@@ -342,6 +387,7 @@ func _step_enemies(delta: float) -> void:
 		var dir := EnemyAI.chase_dir(e["pos"], targets)
 		e["pos"] = EnemyAI.step(e["pos"], dir, delta, Waves.enemy_speed(kind, wave))
 		e["touch_cd"] = maxf(0.0, e["touch_cd"] - delta)
+		e["fire_cd"] = maxf(0.0, e.get("fire_cd", 0.0) - delta)
 		if e["touch_cd"] > 0.0:
 			continue
 		var radius := Combat.enemy_radius(kind)
@@ -360,6 +406,120 @@ func _step_enemies(delta: float) -> void:
 				p["status"] = Combat.PLAYER_DOWNED
 				p["revive_progress"] = 0.0
 			break
+
+
+func _step_combos(delta: float) -> void:
+	"""组合技触发逻辑：遍历所有玩家的 active combos，释放特效"""
+	for id in players:
+		var p: Dictionary = players[id]
+		if p["status"] != Combat.PLAYER_ALIVE:
+			continue
+		var combos: Array = p.get("combos", [])
+		for cid in combos:
+			if cid == Weapons.COMBO_BLACKHOLE:
+				p["combo_timer_blackhole"] = p.get("combo_timer_blackhole", 10.0) - delta
+				if p["combo_timer_blackhole"] <= 0.0:
+					p["combo_timer_blackhole"] = 10.0
+					var tgt: Variant = _nearest_enemy_fast(p["pos"])
+					if tgt != null:
+						var bh_pos: Vector2 = (tgt as Dictionary)["pos"]
+						var bh := _alloc_id()
+						projectiles[bh] = {
+							"pos": bh_pos,
+							"vel": Vector2.ZERO,
+							"ttl": 3.0,
+							"dmg": 5,
+							"dir": Vector2.ZERO,
+							"kind": Weapons.KIND_MINE,
+							"owner": id,
+							"pull_radius": 150.0,
+						}
+			elif cid == Weapons.COMBO_METEOR_SHOWER:
+				p["combo_timer_meteor"] = p.get("combo_timer_meteor", 5.0) - delta
+				if p["combo_timer_meteor"] <= 0.0:
+					p["combo_timer_meteor"] = 5.0
+					for _i in 3:
+						var tgt := _random_player_pos()
+						var off := Vector2(_rng.randf_range(-300, 300), _rng.randf_range(-500, -200))
+						var start := tgt + off
+						var meteor := _alloc_id()
+						projectiles[meteor] = {
+							"pos": start,
+							"vel": Vector2(0, 600),
+							"ttl": 2.0,
+							"dmg": 80,
+							"dir": Vector2(0, 1),
+							"kind": Weapons.KIND_MISSILE,
+							"owner": id,
+							"meteor": true,
+						}
+			elif cid == Weapons.COMBO_TIME_WARP:
+				p["combo_timer_timewarp"] = p.get("combo_timer_timewarp", 15.0) - delta
+				# 时间凝滞：本版本内通过减速敌人实现
+				# 暂不实现全局 time_scale（会扰乱 dt）
+			elif cid == Weapons.COMBO_ICE_STORM:
+				p["combo_timer_icestorm"] = p.get("combo_timer_icestorm", 6.0) - delta
+				if p["combo_timer_icestorm"] <= 0.0:
+					p["combo_timer_icestorm"] = 6.0
+					# 冰风暴：向周围 360 度射 16 颗冰弹
+					var dir := Vector2.RIGHT
+					for a in range(16):
+						var d := dir.rotated(float(a) * TAU / 16.0)
+						var pid := _alloc_id()
+						projectiles[pid] = {
+							"pos": p["pos"],
+							"vel": d * Weapons.speed(Weapons.KIND_FROST),
+							"ttl": 0.8,
+							"dmg": Weapons.damage(Weapons.KIND_FROST, p["mods"]) * 2,
+							"dir": d,
+							"kind": Weapons.KIND_FROST,
+							"owner": id,
+						}
+			elif cid == Weapons.COMBO_JUDGMENT:
+				p["combo_timer_judgment"] = p.get("combo_timer_judgment", 8.0) - delta
+				if p["combo_timer_judgment"] <= 0.0:
+					p["combo_timer_judgment"] = 8.0
+					# 天罚：对所有敌人造成伤害
+					for eid in enemies:
+						enemies[eid]["hp"] -= 50
+
+
+func _step_enemy_firing(delta: float) -> void:
+	"""敌人远程攻击：普通敌人在一定概率下向最近的玩家发射子弹"""
+	if not enemy_fire_enabled:
+		return
+	var targets := _alive_targets()
+	for eid in enemies:
+		var e: Dictionary = enemies[eid]
+		e["fire_cd"] = maxf(0.0, e.get("fire_cd", 0.0) - delta)
+		if e["fire_cd"] > 0.0:
+			continue
+		if targets.is_empty():
+			continue
+		var kind: int = e["kind"]
+		# Boss 和普通敌人的射击频率不同
+		var cd := 2.5 if kind == Combat.ENEMY_KIND_BOSS else 4.0
+		e["fire_cd"] = cd
+		var dir := EnemyAI.chase_dir(e["pos"], targets)
+		if dir == Vector2.ZERO:
+			continue
+		# Boss 射 6 颗扇形弹幕，普通敌人射 1 颗
+		var n := 6 if kind == Combat.ENEMY_KIND_BOSS else 1
+		var spread := 0.3
+		for i in n:
+			var off := (float(i) - float(n - 1) * 0.5) * spread
+			var d := dir.rotated(off)
+			var pid := _alloc_id()
+			projectiles[pid] = {
+				"pos": e["pos"],
+				"vel": d * 200.0,
+				"ttl": 3.0,
+				"dmg": 15 if kind == Combat.ENEMY_KIND_BOSS else 8,
+				"dir": d,
+				"kind": Weapons.KIND_PISTOL,
+				"owner": 0,
+				"from_enemy": true,
+			}
 
 
 func _step_downed(delta: float) -> void:
@@ -557,6 +717,21 @@ func _nearest_alive_player_id(pos: Vector2) -> int:
 		if d < best_d:
 			best_d = d
 			best = id
+	return best
+
+
+func _nearest_enemy_fast(pos: Vector2) -> Variant:
+	"""返回最近的敌人字典，用于组合技定位黑洞位置"""
+	var best: Variant = null
+	var best_d := INF
+	for eid in enemies:
+		var e: Dictionary = enemies[eid]
+		if e["hp"] <= 0:
+			continue
+		var d: float = pos.distance_to(e["pos"])
+		if d < best_d:
+			best_d = d
+			best = e
 	return best
 
 

@@ -145,6 +145,7 @@ func run() -> int:
 	# (12) 武器：霰弹枪一次开火产生多枚弹丸，且可导出弹丸状态
 	var h12 := NetHostLogic.new()
 	h12.reset()
+	h12.enemy_fire_enabled = false
 	h12.spawn_interval = 9999.0
 	h12.spawn_enemy(Vector2(120, 0))
 	h12.players[1]["weapon"] = Weapons.KIND_SHOTGUN
