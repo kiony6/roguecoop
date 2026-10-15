@@ -206,45 +206,74 @@ func _build_levels() -> void:
 	bk.pressed.connect(_go_back); p.add_child(bk)
 
 
-# ═══════════════ 联机大厅（含返回） ═══════════════
+# ═══════════════ 联机大厅（房间号匹配） ═══════════════
 
 func _build_lobby() -> void:
 	var p := _panel(Vector2(320, 100), Vector2(640, 580))
 	p.name = "page_lobby"; p.visible = false; add_child(p); _ctrl["page_lobby"] = p
 	_label("联机大厅", Vector2(40, 20), Color(0.3, 0.7, 1.0), 24)
+	_label("输入相同的 4 位数字房间号即可配对", Vector2(40, 60), Color(0.5, 0.6, 0.8), 13)
+	
 	var li := Label.new()
-	li.position = Vector2(40, 65); li.size = Vector2(560, 25)
+	li.position = Vector2(40, 90); li.size = Vector2(560, 25)
 	li.add_theme_color_override("font_color", Color(1, 0.6, 0.2))
 	p.add_child(li); _ctrl["lobby_info"] = li
-	var hb := _btn("建立主机", Vector2(40, 110), Vector2(200, 50))
+
+	# 创建房间按钮
+	var hb := _btn("创建房间（房主）", Vector2(40, 120), Vector2(260, 50))
 	hb.pressed.connect(_on_host_pressed); p.add_child(hb)
+
+	# 房间号输入
+	var code_label := Label.new()
+	code_label.text = "房间号："; code_label.position = Vector2(40, 200)
+	code_label.add_theme_font_size_override("font_size", 18)
+	code_label.add_theme_color_override("font_color", Color(0.7, 0.85, 1.0))
+	p.add_child(code_label)
+	
 	var ipf := LineEdit.new()
-	ipf.position = Vector2(260, 115); ipf.size = Vector2(340, 35)
-	ipf.text = "127.0.0.1"; ipf.placeholder_text = "主机 IP"
+	ipf.position = Vector2(120, 195); ipf.size = Vector2(160, 40)
+	ipf.placeholder_text = "0000"
+	ipf.max_length = 4
+	ipf.add_theme_constant_override("caret_width", 2)
+	ipf.add_theme_font_size_override("font_size", 22)
 	ipf.add_theme_color_override("font_color", Color(0.8, 0.9, 1.0))
 	ipf.add_theme_color_override("background_color", Color(0.06, 0.1, 0.2))
-	p.add_child(ipf); _ctrl["lobby_ip"] = ipf
-	var jb := _btn("加入房间", Vector2(260, 165), Vector2(200, 50))
+	p.add_child(ipf); _ctrl["lobby_code"] = ipf
+
+	# 加入按钮
+	var jb := _btn("加入房间", Vector2(300, 195), Vector2(180, 42))
 	jb.pressed.connect(_on_join_pressed); p.add_child(jb)
 
-	_label("房主输入 127.0.0.1，队友输入房主公网 IP", Vector2(40, 230), Color(0.4, 0.5, 0.7), 11)
+	# 返回
 	var bk := _btn("← 返回", Vector2(40, 510), Vector2(160, 45))
 	bk.pressed.connect(_go_back); p.add_child(bk)
 
 
 func _show_lobby_panel() -> void: _ctrl["lobby_info"].text = ""; _show("lobby")
 func _on_host_pressed() -> void:
-	Net.set_websocket(false)
-	var err := Net.host_start(Protocol.DEFAULT_PORT)
-	if err != OK: _ctrl["lobby_info"].text = "建立主机失败"; return
+	RoomMatch.room_created.connect(_on_room_created, CONNECT_ONE_SHOT)
+	RoomMatch.match_error.connect(_on_match_error, CONNECT_ONE_SHOT)
+	RoomMatch.create_room()
+	_ctrl["lobby_info"].text = "创建房间中..."
+func _on_room_created(code: String) -> void:
+	_ctrl["lobby_info"].text = "房间号: %s  等待队友加入..." % code
 	get_tree().change_scene_to_file("res://scenes/world.tscn")
+
 func _on_join_pressed() -> void:
-	var ip_str: String = _ctrl["lobby_ip"].text.strip_edges()
-	if ip_str.is_empty(): ip_str = "127.0.0.1"
-	Net.set_websocket(false)
-	var err := Net.client_connect(ip_str, Protocol.DEFAULT_PORT)
-	if err != OK: _ctrl["lobby_info"].text = "发起连接失败"; return
-	_ctrl["lobby_info"].text = "正在连接 %s:%d…" % [ip_str, Protocol.DEFAULT_PORT]
+	var code: String = _ctrl["lobby_code"].text.strip_edges()
+	if code.length() != 4:
+		_ctrl["lobby_info"].text = "房间号必须是 4 位数字"; return
+	_ctrl["lobby_info"].text = "正在搜索房间 %s..." % code
+	RoomMatch.room_joined.connect(_on_room_joined, CONNECT_ONE_SHOT)
+	RoomMatch.match_error.connect(_on_match_error, CONNECT_ONE_SHOT)
+	RoomMatch.join_room(code)
+
+func _on_room_joined(host_ip: String, _port: int) -> void:
+	_ctrl["lobby_info"].text = "已连接到 %s，即将进入游戏..." % host_ip
+	get_tree().change_scene_to_file("res://scenes/world.tscn")
+
+func _on_match_error(msg: String) -> void:
+	_ctrl["lobby_info"].text = msg
 
 
 # ═══════════════ 天赋树（含返回） ═══════════════
@@ -256,25 +285,40 @@ func _build_talent() -> void:
 func _show_talent_panel() -> void:
 	var p = _ctrl["page_talent"]; _clear_page(p)
 	_label("天赋树", Vector2(20, 20), Color(0.3, 0.7, 1.0), 24)
+	# 返回按钮固定在右上角，不会被条目挤出去
+	var close_btn := _btn("× 关闭", Vector2(520, 20), Vector2(60, 35))
+	close_btn.pressed.connect(_go_back); p.add_child(close_btn)
+
 	var sl := Label.new()
 	sl.text = "碎片: %d" % Global.data["shards"]; sl.position = Vector2(20, 55)
 	sl.add_theme_color_override("font_color", Color(1, 0.7, 0.3))
 	sl.add_theme_font_size_override("font_size", 16); p.add_child(sl)
+
+	# 用 ScrollContainer 以防条目溢出
+	var sc := ScrollContainer.new()
+	sc.position = Vector2(0, 80); sc.size = Vector2(600, 470)
+	p.add_child(sc)
+	var vb := VBoxContainer.new()
+	vb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sc.add_child(vb)
+
 	for key in _talent_keys:
 		var lv := Global.talent_level(key)
-		var cost: int = _talent_costs.get(key, 50) * (1 + lv); var y := 90 + _talent_keys.find(key) * 65
+		var cost: int = _talent_costs.get(key, 50) * (1 + lv)
+		var hb := HBoxContainer.new()
+		hb.custom_minimum_size.y = 55
 		var nl := Label.new()
-		nl.text = _talent_names.get(key, key); nl.position = Vector2(20, y)
-		nl.size = Vector2(300, 40); nl.add_theme_font_size_override("font_size", 15); p.add_child(nl)
+		nl.text = _talent_names.get(key, key); nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		nl.add_theme_font_size_override("font_size", 15); hb.add_child(nl)
 		var ll := Label.new()
-		ll.text = "Lv.%d  " % lv; ll.position = Vector2(320, y); ll.size = Vector2(50, 40)
-		ll.add_theme_color_override("font_color", Color(0.5, 0.8, 1.0)); p.add_child(ll)
-		var b := _btn("升级(%d碎)" % cost, Vector2(400, y), Vector2(160, 40))
+		ll.text = "Lv.%d" % lv; ll.custom_minimum_size.x = 50
+		ll.add_theme_color_override("font_color", Color(0.5, 0.8, 1.0)); hb.add_child(ll)
+		var b := _btn("升级(%d碎)" % cost, Vector2(), Vector2(160, 40))
 		var can_up: bool = lv < 10 and Global.data["shards"] >= cost; b.disabled = not can_up
 		var k: String = key
-		b.pressed.connect(_upgrade_talent.bind(k)); p.add_child(b)
-	var back := _btn("← 返回", Vector2(20, 500), Vector2(160, 45))
-	back.pressed.connect(_go_back); _show("talent")
+		b.pressed.connect(_upgrade_talent.bind(k)); hb.add_child(b)
+		vb.add_child(hb)
+	_show("talent")
 
 func _upgrade_talent(key: String) -> void:
 	var cost: int = _talent_costs.get(key, 50) * (1 + Global.talent_level(key))
@@ -290,30 +334,40 @@ func _build_rank() -> void:
 func _show_rank_panel() -> void:
 	var p = _ctrl["page_rank"]; _clear_page(p)
 	_label("排行榜", Vector2(20, 20), Color(1, 0.7, 0.3), 24)
+	var close_btn := _btn("× 关闭", Vector2(520, 20), Vector2(60, 35))
+	close_btn.pressed.connect(_go_back); p.add_child(close_btn)
+
+	var sc := ScrollContainer.new()
+	sc.position = Vector2(0, 55); sc.size = Vector2(600, 495)
+	p.add_child(sc)
+	var vb := VBoxContainer.new()
+	vb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sc.add_child(vb)
+
 	var scores: Array = Global.data["scores"]
 	if scores.size() == 0:
 		var e := Label.new()
-		e.text = "暂无记录，先去打一局吧！"; e.position = Vector2(20, 65)
+		e.text = "暂无记录，先去打一局吧！"
 		e.add_theme_color_override("font_color", Color(0.5, 0.6, 0.8))
-		e.add_theme_font_size_override("font_size", 14); p.add_child(e)
+		e.add_theme_font_size_override("font_size", 14); vb.add_child(e)
 	else:
 		var hdr := Label.new()
-		hdr.text = "排  名      玩  家           击  杀     等  级"
-		hdr.position = Vector2(20, 65); hdr.size = Vector2(540, 25)
-		hdr.add_theme_color_override("font_color", Color(0.5, 0.8, 1.0))
-		p.add_child(hdr)
-		for i in mini(20, scores.size()):
+		hdr.text = "  排  名       玩  家              击  杀       等  级"
+		hdr.add_theme_color_override("font_color", Color(0.5, 0.8, 1.0)); vb.add_child(hdr)
+		for i in mini(50, scores.size()):
 			var s: Dictionary = scores[i]
-			var row := Label.new()
-			var top := i == 0
-			var col := Color(1, 0.7, 0.3) if top else Color(0.7, 0.85, 1.0)
+			var row := HBoxContainer.new()
 			var medal: String = ["🥇", "🥈", "🥉"][i] if i < 3 else "#%d" % (i + 1)
-			row.text = "%s      %-12s     %-6d    Lv.%d" % [medal, s.get("name", "?"), s.get("kills", 0), s.get("level", 1)]
-			row.position = Vector2(20, 95 + i * 22); row.size = Vector2(540, 20)
-			row.add_theme_color_override("font_color", col)
-			row.add_theme_font_size_override("font_size", 13); p.add_child(row)
-	var back := _btn("← 返回", Vector2(20, 500), Vector2(160, 45))
-	back.pressed.connect(_go_back); _show("rank")
+			var rl := Label.new()
+			rl.text = medal; rl.custom_minimum_size.x = 40; row.add_child(rl)
+			var nl := Label.new()
+			nl.text = str(s.get("name", "?")); nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL; row.add_child(nl)
+			var kl := Label.new()
+			kl.text = "击杀 %d" % s.get("kills", 0); kl.custom_minimum_size.x = 100; row.add_child(kl)
+			var ll := Label.new()
+			ll.text = "Lv.%d" % s.get("level", 1); ll.custom_minimum_size.x = 60; row.add_child(ll)
+			vb.add_child(row)
+	_show("rank")
 
 
 # ═══════════════ 设置（含返回） ═══════════════
@@ -325,6 +379,8 @@ func _build_settings() -> void:
 func _show_settings_panel() -> void:
 	var p = _ctrl["page_settings"]; _clear_page(p)
 	_label("设  置", Vector2(20, 20), Color(0.3, 0.7, 1.0), 24)
+	var close_btn := _btn("× 关闭", Vector2(520, 20), Vector2(60, 35))
+	close_btn.pressed.connect(_go_back); p.add_child(close_btn)
 
 	var nl := Label.new()
 	nl.text = "当前昵称: %s" % Global.nickname; nl.position = Vector2(20, 70); nl.size = Vector2(300, 25)

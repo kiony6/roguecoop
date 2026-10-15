@@ -21,6 +21,7 @@ config/icon="res://icon.svg"
 Boot="*res://autoload/boot.gd"
 Global="*res://autoload/global.gd"
 Net="*res://autoload/net.gd"
+RoomMatch="*res://autoload/room_match.gd"
 
 [display]
 
