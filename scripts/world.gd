@@ -67,9 +67,17 @@ func _ready() -> void:
 	if _is_single():
 		_single_host = NetHostLogic.new()
 		_single_host.reset()
-		_single_host.spawn_interval = 1.5
+		var lvl := clampi(Global.current_level, 0, LEVEL_CFG.size() - 1)
+		var cfg := LEVEL_CFG[lvl]
+		_single_host.spawn_interval = max(0.4, 1.5 - float(lvl) * 0.2)
 		_single_host.add_player(_single_id)
 		_single_host.players[_single_id]["pos"] = Vector2(640, 360)
+		# 初始刷一批敌人让玩家有东西打
+		for i in 10:
+			var a := randf() * TAU
+			var r := randf_range(200, 400)
+			var pos := Vector2(640.0, 360.0) + Vector2.RIGHT.rotated(a) * r
+			_single_host.spawn_enemy(pos, Combat.ENEMY_KIND_NORMAL)
 	else:
 		Net.world_state.connect(_on_world_state)
 		Net.player_left.connect(_on_player_left)
