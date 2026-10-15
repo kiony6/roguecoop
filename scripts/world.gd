@@ -68,7 +68,7 @@ func _ready() -> void:
 		_single_host = NetHostLogic.new()
 		_single_host.reset()
 		var lvl := clampi(Global.current_level, 0, LEVEL_CFG.size() - 1)
-		var cfg := LEVEL_CFG[lvl]
+		var cfg: Dictionary = LEVEL_CFG[lvl]
 		_single_host.spawn_interval = max(0.4, 1.5 - float(lvl) * 0.2)
 		_single_host.add_player(_single_id)
 		_single_host.players[_single_id]["pos"] = Vector2(640, 360)
