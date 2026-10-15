@@ -143,6 +143,12 @@ func _physics_process(_delta: float) -> void:
 		_sync_enemies(h.enemy_states())
 		_sync_loot(h.loot_states())
 		_sync_projectiles(h.projectile_states())
+		# 强制同步玩家节点位置到 host 模拟位置（单机模式下 Net 不会触发 push_authoritative）
+		if _single_host and _single_host.players.has(_single_id):
+			var ppos: Vector2 = _single_host.players[_single_id]["pos"]
+			var pnode: Node2D = _player_nodes.get(_single_id)
+			if pnode != null:
+				pnode.position = ppos
 		# 更新 HUD 数据
 		var m := h.meta(_single_id)
 		_level = int(m.get("level", 1))
@@ -215,6 +221,18 @@ func _sync_players(players: Array) -> void:
 			int(p.get("revive01", 0)),
 			int(p.get("weapon", 0))
 		)
+
+	# 单机模式：从 _single_host 直接同步玩家位置，不走 Net 信号
+	if _is_single() and _single_host != null:
+		for pid in _single_host.players:
+			var p: Dictionary = _single_host.players[pid]
+			var node: Node2D = _player_nodes.get(pid)
+			if node == null:
+				node = _spawn_player(pid)
+			node.position = p["pos"]
+			node.hp = int(p.get("hp", 100))
+			node.status = int(p.get("status", 0))
+			node.weapon = int(p.get("weapon", 0))
 
 
 func _sync_enemies(enemies: Array) -> void:
