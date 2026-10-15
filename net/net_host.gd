@@ -137,7 +137,10 @@ func meta(id: int) -> Dictionary:
 		"xp": int(p["xp"]),
 		"kills": kills,
 		"boss_kills": boss_kills,
-		"wave": wave
+		"wave": wave,
+		"hp": int(p["hp"]),
+		"max_hp": Progression.max_hp(p["mods"]),
+		"combos": p.get("combos", []),
 	}
 
 

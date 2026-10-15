@@ -6,12 +6,50 @@
 script = ExtResource("1_world")
 
 [node name="Camera2D" type="Camera2D" parent="."]
+anchor_mode = 1
 
 [node name="Hud" type="CanvasLayer" parent="."]
 
-[node name="Info" type="Label" parent="Hud"]
-offset_left = 16.0
-offset_top = 12.0
-offset_right = 480.0
+[node name="TopBar" type="Panel" parent="Hud"]
+offset_right = 1280.0
 offset_bottom = 40.0
+color = Color(0, 0, 0, 0.5)
+
+[node name="Info" type="Label" parent="Hud/TopBar"]
+offset_left = 16.0
+offset_top = 4.0
+offset_right = 1264.0
+offset_bottom = 36.0
+theme_override_colors/font_color = Color(1, 1, 1, 0.9)
+theme_override_font_sizes/font_size = 16
+text = ""
+
+[node name="HpBar" type="ColorRect" parent="Hud"]
+offset_left = 16.0
+offset_top = 50.0
+offset_right = 316.0
+offset_bottom = 62.0
+color = Color(0.15, 0.15, 0.15, 0.7)
+
+[node name="HpFill" type="ColorRect" parent="Hud/HpBar"]
+offset_right = 300.0
+offset_bottom = 12.0
+color = Color(0.2, 0.8, 0.3, 0.9)
+
+[node name="HpLabel" type="Label" parent="Hud"]
+offset_left = 16.0
+offset_top = 22.0
+offset_right = 200.0
+offset_bottom = 46.0
+theme_override_colors/font_color = Color(1, 1, 1, 0.8)
+theme_override_font_sizes/font_size = 14
+text = ""
+
+[node name="ComboLabel" type="Label" parent="Hud"]
+offset_left = 16.0
+offset_top = 75.0
+offset_right = 300.0
+offset_bottom = 95.0
+theme_override_colors/font_color = Color(1, 0.7, 0.3, 0.9)
+theme_override_font_sizes/font_size = 12
 text = ""

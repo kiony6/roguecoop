@@ -29,11 +29,17 @@ var _kills := 0
 var _wave := 1
 var _local_weapon := 0
 var _last_pick := ""
+var _hp := 100
+var _max_hp := 100
+var _combos_str := ""
 
 var _upgrade_menu: Control
 var _runover_menu: Control
 
-@onready var _info: Label = $Hud/Info
+@onready var _info: Label = $Hud/TopBar/Info
+@onready var _hp_fill: ColorRect = $Hud/HpBar/HpFill
+@onready var _hp_label: Label = $Hud/HpLabel
+@onready var _combo_label: Label = $Hud/ComboLabel
 
 
 func _ready() -> void:
@@ -82,6 +88,18 @@ func _on_world_state(
 	_xp = int(meta.get("xp", 0))
 	_kills = int(meta.get("kills", 0))
 	_wave = int(meta.get("wave", 1))
+	_hp = int(meta.get("hp", 100))
+	_max_hp = int(meta.get("max_hp", 100))
+	var combos_raw: Array = meta.get("combos", [])
+	_combos_str = ""
+	if combos_raw.size() > 0:
+		var names: Array = []
+		for cid in combos_raw:
+			for c in Weapons.COMBOS:
+				if c["id"] == cid:
+					names.append(c["name"])
+					break
+		_combos_str = "组合: " + ", ".join(names)
 	_sync_players(players)
 	_sync_enemies(enemies)
 	_sync_loot(loot)
@@ -235,18 +253,22 @@ func _update_info() -> void:
 	var pick := "" if _last_pick.is_empty() else " | %s" % _last_pick
 	var wpn := " | 武器 %s" % Weapons.name_of(_local_weapon)
 	_info.text = (
-		"%s | 波次 %d | 等级 %d (经验 %d) | 击杀 %d | 在线 %d | 敌人 %d | 掉落 %d | 弹丸 %d%s%s"
+		"%s | 关卡 %d | 波次 %d | 击杀 %d | 在线 %d | 敌人 %d%s%s"
 		% [
 			role,
-			_wave,
 			_level,
-			_xp,
+			_wave,
 			_kills,
 			_player_nodes.size(),
 			_enemy_nodes.size(),
-			_loot_nodes.size(),
-			_proj_nodes.size(),
 			wpn,
 			pick,
 		]
 	)
+	# 血量条
+	if _max_hp > 0:
+		var ratio := float(_hp) / float(_max_hp)
+		_hp_fill.size.x = 300.0 * clamp(ratio, 0.0, 1.0)
+		_hp_label.text = "HP: %d / %d" % [_hp, _max_hp]
+	# 组合技显示
+	_combo_label.text = _combos_str

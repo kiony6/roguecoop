@@ -7,30 +7,140 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 script = ExtResource("1_main")
 
-[node name="Panel" type="VBoxContainer" parent="."]
-offset_left = 480.0
-offset_top = 280.0
-offset_right = 800.0
+[node name="LoginPanel" type="Panel" parent="."]
+visible = true
+offset_left = 440.0
+offset_top = 240.0
+offset_right = 840.0
 offset_bottom = 460.0
 
-[node name="Title" type="Label" parent="Panel"]
-text = "RogueCoop · 肉鸽多人联机"
+[node name="Title" type="Label" parent="LoginPanel"]
+offset_left = 40.0
+offset_top = 20.0
+offset_right = 360.0
+offset_bottom = 60.0
+text = "RogueCoop · 肉鸽联机割草"
+theme_override_font_sizes/font_size = 22
 
-[node name="IpField" type="LineEdit" parent="Panel"]
+[node name="NickLabel" type="Label" parent="LoginPanel"]
+offset_left = 40.0
+offset_top = 100.0
+offset_right = 360.0
+offset_bottom = 130.0
+text = "输入昵称："
+
+[node name="NickField" type="LineEdit" parent="LoginPanel"]
+offset_left = 40.0
+offset_top = 135.0
+offset_right = 360.0
+offset_bottom = 170.0
+placeholder_text = "你的昵称"
+
+[node name="LoginBtn" type="Button" parent="LoginPanel"]
+offset_left = 40.0
+offset_top = 200.0
+offset_right = 200.0
+offset_bottom = 240.0
+text = "进入游戏"
+
+[node name="MenuPanel" type="Panel" parent="."]
+visible = false
+offset_left = 440.0
+offset_top = 180.0
+offset_right = 840.0
+offset_bottom = 520.0
+
+[node name="MenuTitle" type="Label" parent="MenuPanel"]
+offset_left = 40.0
+offset_top = 20.0
+offset_right = 360.0
+offset_bottom = 60.0
+text = "主菜单"
+theme_override_font_sizes/font_size = 22
+
+[node name="NickDisplay" type="Label" parent="MenuPanel"]
+offset_left = 40.0
+offset_top = 70.0
+offset_right = 360.0
+offset_bottom = 95.0
+text = ""
+
+[node name="StartBtn" type="Button" parent="MenuPanel"]
+offset_left = 40.0
+offset_top = 120.0
+offset_right = 300.0
+offset_bottom = 160.0
+text = "开始游戏（单人）"
+
+[node name="LobbyBtn" type="Button" parent="MenuPanel"]
+offset_left = 40.0
+offset_top = 180.0
+offset_right = 300.0
+offset_bottom = 220.0
+text = "联机大厅"
+
+[node name="LevelPanel" type="Panel" parent="."]
+visible = false
+offset_left = 320.0
+offset_top = 100.0
+offset_right = 960.0
+offset_bottom = 680.0
+
+[node name="LevelTitle" type="Label" parent="LevelPanel"]
+offset_left = 40.0
+offset_top = 20.0
+offset_right = 600.0
+offset_bottom = 60.0
+text = "选择关卡"
+theme_override_font_sizes/font_size = 24
+
+[node name="LobbyPanel" type="Panel" parent="."]
+visible = false
+offset_left = 320.0
+offset_top = 100.0
+offset_right = 960.0
+offset_bottom = 680.0
+
+[node name="LobbyTitle" type="Label" parent="LobbyPanel"]
+offset_left = 40.0
+offset_top = 20.0
+offset_right = 600.0
+offset_bottom = 60.0
+text = "联机大厅"
+theme_override_font_sizes/font_size = 24
+
+[node name="LobbyInfo" type="Label" parent="LobbyPanel"]
+offset_left = 40.0
+offset_top = 70.0
+offset_right = 600.0
+offset_bottom = 95.0
+text = ""
+
+[node name="LobbyHostBtn" type="Button" parent="LobbyPanel"]
+offset_left = 40.0
+offset_top = 120.0
+offset_right = 240.0
+offset_bottom = 160.0
+text = "建立主机"
+
+[node name="LobbyJoinBtn" type="Button" parent="LobbyPanel"]
+offset_left = 260.0
+offset_top = 120.0
+offset_right = 460.0
+offset_bottom = 160.0
+text = "加入房间"
+
+[node name="LobbyIpField" type="LineEdit" parent="LobbyPanel"]
+offset_left = 40.0
+offset_top = 180.0
+offset_right = 460.0
+offset_bottom = 215.0
 text = "127.0.0.1"
 placeholder_text = "主机 IP"
 
-[node name="PortField" type="LineEdit" parent="Panel"]
-text = "25600"
-placeholder_text = "端口（UDP）"
-
-[node name="TransportOption" type="OptionButton" parent="Panel"]
-
-[node name="HostButton" type="Button" parent="Panel"]
-text = "建立主机"
-
-[node name="JoinButton" type="Button" parent="Panel"]
-text = "加入主机"
-
-[node name="Status" type="Label" parent="Panel"]
-text = ""
+[node name="LobbyBackBtn" type="Button" parent="LobbyPanel"]
+offset_left = 40.0
+offset_top = 520.0
+offset_right = 240.0
+offset_bottom = 560.0
+text = "返回"
