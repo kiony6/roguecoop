@@ -64,6 +64,11 @@ func _host() -> NetHostLogic:
 
 
 func _ready() -> void:
+	# Camera2D 跟随本地玩家
+	var cam: Camera2D = $Camera2D
+	cam.enabled = true
+	cam.zoom = Vector2(1, 1)
+
 	if _is_single():
 		_single_host = NetHostLogic.new()
 		_single_host.reset()
@@ -82,6 +87,8 @@ func _ready() -> void:
 		_sync_players(_single_host.player_states())
 		_sync_enemies(_single_host.enemy_states())
 		_sync_loot(_single_host.loot_states())
+		# 立即把 camera 对准玩家
+		cam.position = Vector2(640, 360)
 	else:
 		Net.world_state.connect(_on_world_state)
 		Net.player_left.connect(_on_player_left)
