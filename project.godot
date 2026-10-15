@@ -33,91 +33,91 @@ window/stretch/mode="canvas_items"
 move_left={
 "deadzone": 0.5,
 "events": [{
-"type": 0,
-"keycode": 65,
-"physical_keycode": 0,
-"key_label": 0,
-"unicode": 0,
-"location": 0,
-"ctrl_pressed": false,
-"shift_pressed": false,
 "alt_pressed": false,
-"meta_pressed": false,
-"pressed": false,
+"ctrl_pressed": false,
 "echo": false,
-"script": null
+"key_label": 0,
+"keycode": 65,
+"location": 0,
+"meta_pressed": false,
+"physical_keycode": 0,
+"pressed": false,
+"script": null,
+"shift_pressed": false,
+"type": 0,
+"unicode": 0
 }]
 }
 move_right={
 "deadzone": 0.5,
 "events": [{
-"type": 0,
-"keycode": 68,
-"physical_keycode": 0,
-"key_label": 0,
-"unicode": 0,
-"location": 0,
-"ctrl_pressed": false,
-"shift_pressed": false,
 "alt_pressed": false,
-"meta_pressed": false,
-"pressed": false,
+"ctrl_pressed": false,
 "echo": false,
-"script": null
+"key_label": 0,
+"keycode": 68,
+"location": 0,
+"meta_pressed": false,
+"physical_keycode": 0,
+"pressed": false,
+"script": null,
+"shift_pressed": false,
+"type": 0,
+"unicode": 0
 }]
 }
 move_up={
 "deadzone": 0.5,
 "events": [{
-"type": 0,
-"keycode": 87,
-"physical_keycode": 0,
-"key_label": 0,
-"unicode": 0,
-"location": 0,
-"ctrl_pressed": false,
-"shift_pressed": false,
 "alt_pressed": false,
-"meta_pressed": false,
-"pressed": false,
+"ctrl_pressed": false,
 "echo": false,
-"script": null
+"key_label": 0,
+"keycode": 87,
+"location": 0,
+"meta_pressed": false,
+"physical_keycode": 0,
+"pressed": false,
+"script": null,
+"shift_pressed": false,
+"type": 0,
+"unicode": 0
 }]
 }
 move_down={
 "deadzone": 0.5,
 "events": [{
-"type": 0,
-"keycode": 83,
-"physical_keycode": 0,
-"key_label": 0,
-"unicode": 0,
-"location": 0,
-"ctrl_pressed": false,
-"shift_pressed": false,
 "alt_pressed": false,
-"meta_pressed": false,
-"pressed": false,
+"ctrl_pressed": false,
 "echo": false,
-"script": null
+"key_label": 0,
+"keycode": 83,
+"location": 0,
+"meta_pressed": false,
+"physical_keycode": 0,
+"pressed": false,
+"script": null,
+"shift_pressed": false,
+"type": 0,
+"unicode": 0
 }]
 }
 fire={
 "deadzone": 0.5,
 "events": [{
-"type": 0,
-"keycode": 32,
-"physical_keycode": 0,
-"key_label": 0,
-"unicode": 0,
-"location": 0,
-"ctrl_pressed": false,
-"shift_pressed": false,
 "alt_pressed": false,
-"meta_pressed": false,
-"pressed": false,
+"ctrl_pressed": false,
 "echo": false,
-"script": null
+"key_label": 0,
+"keycode": 32,
+"location": 0,
+"meta_pressed": false,
+"physical_keycode": 0,
+"pressed": false,
+"script": null,
+"shift_pressed": false,
+"type": 0,
+"unicode": 0
 }]
 }
 

@@ -78,6 +78,10 @@ func _ready() -> void:
 			var r := randf_range(200, 400)
 			var pos := Vector2(640.0, 360.0) + Vector2.RIGHT.rotated(a) * r
 			_single_host.spawn_enemy(pos, Combat.ENEMY_KIND_NORMAL)
+		# 首次立即渲染，不等物理帧
+		_sync_players(_single_host.player_states())
+		_sync_enemies(_single_host.enemy_states())
+		_sync_loot(_single_host.loot_states())
 	else:
 		Net.world_state.connect(_on_world_state)
 		Net.player_left.connect(_on_player_left)

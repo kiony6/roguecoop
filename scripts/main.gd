@@ -30,9 +30,9 @@ func _ready() -> void:
 	for i in 5:
 		var btn := Button.new()
 		btn.name = "LevelBtn%d" % i
-		btn.custom_minimum_size = Vector2(560, 50)
-		var names := ["数据废墟", "病毒丛林", "故障深渊", "核心风暴", "终焉之地"]
-		btn.text = "第 %d 关: %s" % [i + 1, names[i]]
+		btn.text = "第 %d 关: %s" % [i + 1, ["数据废墟", "病毒丛林", "故障深渊", "核心风暴", "终焉之地"][i]]
+		btn.position = Vector2(40, 100 + i * 70)
+		btn.size = Vector2(560, 55)
 		btn.pressed.connect(_on_level_selected.bind(i))
 		$LevelPanel.add_child(btn)
 
