@@ -9,6 +9,8 @@ const Progression := preload("res://sim/progression.gd")
 const Weapons := preload("res://sim/weapons.gd")
 const Rooms := preload("res://sim/rooms.gd")
 const Waves := preload("res://sim/waves.gd")
+const Skills := preload("res://sim/skills.gd")
+const SkillRuntime := preload("res://sim/skill_runtime.gd")
 
 var tick := 0
 var snapshot_count := 0
@@ -122,6 +124,7 @@ func physics_step(delta: float) -> void:
 		players[1]["move"] = local_move
 		players[1]["buttons"] = local_buttons
 	_step_players(delta)
+	_step_skills(delta)         # 技能触发
 	_step_firing()
 	_step_combos(delta)         # 组合技触发
 	_step_enemy_firing(delta)   # 敌人远程攻击
@@ -406,6 +409,92 @@ func _step_enemies(delta: float) -> void:
 				p["status"] = Combat.PLAYER_DOWNED
 				p["revive_progress"] = 0.0
 			break
+
+
+func _step_skills(delta: float) -> void:
+	"""技能运行时驱动：周期触发 + 事件驱动（命中/击杀/拾取/受伤）"""
+	var now := float(Time.get_ticks_msec()) / 1000.0
+	for id in players:
+		var p: Dictionary = players[id]
+		if p["status"] != Combat.PLAYER_ALIVE:
+			continue
+		var unlocked: Array = p.get("unlocked_skills", [])
+		if unlocked.is_empty():
+			continue
+		var state: Dictionary = p.get("skill_state", SkillRuntime.new_state())
+		p["skill_state"] = state
+
+		# 周期触发
+		var commands: Array = SkillRuntime.tick(state, unlocked, delta, now)
+		for cmd in commands:
+			_execute_skill(cmd, p, id)
+
+		# 后续可在 _kill_enemy / 受损时调用 SkillRuntime.dispatch(TRIG_KILL / TRIG_HURT)
+
+
+func _execute_skill(cmd: Dictionary, p: Dictionary, owner: int) -> void:
+	"""把技能指令翻译成实际的子弹/伤害/掉落"""
+	var effect: int = cmd.get("effect", 0)
+	var pos: Vector2 = p["pos"]
+	match effect:
+		Skills.EFF_SPAWN_BYTE:
+			_add_loot(pos, Combat.LOOT_KIND_XP, owner)
+		Skills.EFF_SINGLE_DMG:
+			var dir := Combat.aim_dir(pos, _alive_targets())
+			if dir == Vector2.ZERO:
+				return
+			_spawn_skill_projectile(pos, dir, cmd, owner)
+		Skills.EFF_ORBIT:
+			var n := clampi(cmd.get("count", 3), 1, 8)
+			for i in n:
+				var a := float(i) / float(n) * TAU
+				var dir := Vector2.RIGHT.rotated(a)
+				var speed := 180.0
+				var pid := _alloc_id()
+				projectiles[pid] = {
+					"pos": pos,
+					"vel": dir * speed,
+					"ttl": 999.0,
+					"dmg": int(cmd.get("damage", 8)),
+					"dir": dir,
+					"kind": Skills.PROJ_ORBIT,
+					"owner": owner,
+					"orbit": true,
+					"orbit_offset": i,
+				}
+		Skills.EFF_NUKE:
+			for eid in enemies:
+				var e: Dictionary = enemies[eid]
+				var d := pos.distance_to(e["pos"])
+				if d < float(cmd.get("radius", 220.0)):
+					e["hp"] -= int(cmd.get("damage", 60))
+		Skills.EFF_BYTE_STORM, Skills.EFF_BYTE_PULSE:
+			for eid in enemies:
+				enemies[eid]["hp"] -= int(cmd.get("damage", 24))
+
+
+func _spawn_skill_projectile(pos: Vector2, dir: Vector2, cmd: Dictionary, owner: int) -> void:
+	var proj_kind: int = cmd.get("proj_kind", Skills.PROJ_DATA)
+	var dmg := int(cmd.get("damage", 14))
+	var speed := float(cmd.get("speed", 600.0))
+	var ttl := float(cmd.get("ttl", 1.4))
+	var count := clampi(cmd.get("count", 1), 1, 8)
+	var spread := 0.08
+	for i in count:
+		if projectiles.size() >= Weapons.MAX_PROJECTILES:
+			break
+		var off := (float(i) - float(count - 1) * 0.5) * spread
+		var d := dir.rotated(off)
+		var pid := _alloc_id()
+		projectiles[pid] = {
+			"pos": pos,
+			"vel": d * speed,
+			"ttl": ttl,
+			"dmg": dmg,
+			"dir": d,
+			"kind": proj_kind,
+			"owner": owner,
+		}
 
 
 func _step_combos(delta: float) -> void:
@@ -761,6 +850,8 @@ func _new_player() -> Dictionary:
 		"weapon": Weapons.default_id(),
 		"weapons": [Weapons.default_id()],
 		"combos": [],
+		"unlocked_skills": [],
+		"skill_state": SkillRuntime.new_state(),
 		"mods": Progression.default_modifiers(),
 		"level": 1,
 		"xp": 0,
