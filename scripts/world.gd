@@ -374,6 +374,10 @@ func _on_run_over(won: bool, stats: Dictionary) -> void:
 	# 奖励碎片
 	var reward := int(stats.get("kills", 0)) * 2 + (50 if won else 10)
 	Global.add_shards(reward)
+	# 奖励技能点
+	var sp := clampi(int(stats.get("boss_kills", 0)) + int(stats.get("kills", 0)) / 20 + 1, 0, 5)
+	Global.data["skill_points"] = int(Global.data.get("skill_points", 0)) + sp
+	Global.save_data()
 
 
 func _on_back_requested() -> void:
