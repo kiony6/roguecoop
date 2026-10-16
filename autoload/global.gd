@@ -9,6 +9,8 @@ var data := {
 	"scores": [],
 	"talents": {"hp": 0, "damage": 0, "speed": 0, "crit": 0, "atk_speed": 0, "regen": 0},
 	"accounts": {},
+	"unlocked_skills": [],
+	"skill_points": 0,
 }
 
 const SAVE_PATH := "user://save_roguecoop.json"

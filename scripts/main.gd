@@ -27,6 +27,7 @@ func _ready() -> void:
 	_build_talent()
 	_build_rank()
 	_build_settings()
+	_build_skill_tree()
 	Net.connected_ok.connect(_on_connected, CONNECT_ONE_SHOT)
 	Net.connection_failed.connect(_on_connection_failed)
 	_show("login")
@@ -168,16 +169,17 @@ func _build_menu() -> void:
 	sl.add_theme_color_override("font_color", Color(1, 0.7, 0.3))
 	p.add_child(sl); _ctrl["shard_label"] = sl
 
-	var items := ["开始游戏", "天赋树", "排行榜", "联机大厅", "设置"]
+	var items := ["开始游戏", "技能树", "天赋树", "排行榜", "联机大厅", "设置"]
 	var funcs := [
 		Callable(self, "_show_levels"),
+		Callable(self, "_show_skill_tree"),
 		Callable(self, "_show_talent_panel"),
 		Callable(self, "_show_rank_panel"),
 		Callable(self, "_show_lobby_panel"),
 		Callable(self, "_show_settings_panel"),
 	]
 	for i in items.size():
-		var b := _btn(items[i], Vector2(40, 130 + i * 52), Vector2(300, 44))
+		var b := _btn(items[i], Vector2(40, 130 + i * 46), Vector2(300, 40))
 		b.pressed.connect(funcs[i]); p.add_child(b)
 
 
@@ -422,6 +424,27 @@ func _show_settings_panel() -> void:
 
 	var back := _btn("← 返回主菜单", Vector2(20, 440), Vector2(200, 45))
 	back.pressed.connect(_go_back); _show("settings")
+
+
+# ═══════════════ 技能树 ═══════════════
+
+func _build_skill_tree() -> void:
+	var st := Panel.new()
+	st.set_script(preload("res://scripts/skill_tree.gd"))
+	st.name = "page_skill_tree"
+	st.visible = false
+	add_child(st)
+	_ctrl["page_skill_tree"] = st
+
+
+func _show_skill_tree() -> void:
+	for k in _ctrl:
+		var p = _ctrl.get(k)
+		if p is Control:
+			p.visible = k == "page_skill_tree"
+	var st = _ctrl["page_skill_tree"]
+	if st != null and st.has_method("refresh"):
+		st.refresh()
 
 
 # ── 工具 ──

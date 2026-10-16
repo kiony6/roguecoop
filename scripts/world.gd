@@ -12,6 +12,7 @@ const Weapons := preload("res://sim/weapons.gd")
 const Rooms := preload("res://sim/rooms.gd")
 const Combat := preload("res://sim/combat.gd")
 const NetHostLogic := preload("res://net/net_host.gd")
+const SkillRuntime := preload("res://sim/skill_runtime.gd")
 
 # 5 关卡配置（参考 pygame 版 LEVELS）
 const LEVEL_CFG: Array = [
@@ -87,6 +88,9 @@ func _ready() -> void:
 		p["mods"]["cooldown_scale"] = maxf(0.5, 1.0 - Global.talent_level("atk_speed") * 0.05)
 		p["mods"]["heal_per_level"] = Global.talent_level("regen")
 		p["mods"]["max_hp_add"] = Global.talent_level("hp") * 10
+		# 应用技能树：已解锁的技能节点和技能点
+		p["unlocked_skills"] = Global.data.get("unlocked_skills", []).duplicate()
+		p["skill_state"] = SkillRuntime.new_state()
 		# 初始刷一批敌人让玩家有东西打
 		for i in 10:
 			var a := randf() * TAU
